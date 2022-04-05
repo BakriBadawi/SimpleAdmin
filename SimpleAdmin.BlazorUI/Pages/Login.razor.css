@@ -1,0 +1,10 @@
+﻿.login {
+    height: 100%;
+    width: 100%;
+    padding: 5% 0;
+    position: fixed;
+}
+
+center {
+    margin: 10px;
+}

@@ -1,0 +1,9 @@
+﻿global using Xunit;
+global using SimpleAdmin.API.Controllers;
+global using SimpleAdmin.DataAccess.Models;
+global using SimpleAdmin.DataAccess.Repository;
+global using Microsoft.AspNetCore.Mvc;
+global using System.Collections.Generic;
+global using SimpleAdmin.Model;
+global using System.Linq;
+global using System;

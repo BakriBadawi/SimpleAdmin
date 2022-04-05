@@ -1,0 +1,76 @@
+﻿<div class="dropdown bootstrap-select show-tick show-menu-arrow">
+    <button @onclick="@btnclick" type="button" class="btn dropdown-toggle form-control btn-light" data-toggle="dropdown" title="@String.Join(", ", DataList.Where(c=>c.Selected).Select(c=>c.Value))">
+        <div class="filter-option">
+            <div class="filter-option-inner">
+                <div class="filter-option-inner-inner">@String.Join(", ", DataList.Where(c=>c.Selected).Select(c=>c.Value))</div>
+            </div>
+        </div>
+    </button>
+
+    <div class="dropdown-menu @show" role="combobox" x-placement="top-start">
+        <div class="inner show" role="listbox" aria-expanded="true" tabindex="-1" style="max-height: 92px; overflow-y: auto; min-height: 0px;">
+            <ul class="dropdown-menu inner show">
+                @if (DataList != null)
+                {
+                    @foreach (MultiDDLModel dataitem in DataList)
+                    {
+                        <li class="@(dataitem.Selected?"selected":"")">
+                            <a role="option" class="dropdown-item" @onclick="@(e=>ddlItemClick(dataitem))">
+                                @if (dataitem.Selected)
+                                {
+                                    <span class="bs-ok-default check-mark"></span>
+                                }
+                                <span id="@dataitem.Id" class="text">@dataitem.Value</span>
+                            </a>
+                        </li>
+                    }
+                }
+
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<List<MultiDDLModel>> dataListChanged { get; set; }
+    [Parameter]
+    public List<MultiDDLModel> DataList
+    {
+        get => dataList;
+        set
+        {
+            if (dataList != value)
+            {
+                dataList = value;
+                dataListChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    private string show = "";
+    private List<MultiDDLModel> dataList;
+
+    private void ddlItemClick(MultiDDLModel dataitem)
+    {
+        dataitem.Selected = !dataitem.Selected;
+    }
+    private void ddlChange(ChangeEventArgs e)
+    {
+        MultiDDLModel current = DataList.FirstOrDefault(c => c.Id == e.Value.ToString());
+        current.Selected = !current.Selected;
+    }
+    private void btnclick()
+    {
+        if (string.IsNullOrEmpty(show))
+        {
+            show = "show";
+        }
+        else
+        {
+            show = ""; 
+        }
+    }
+
+}

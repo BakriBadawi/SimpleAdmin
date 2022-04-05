@@ -1,0 +1,25 @@
+﻿@inherits LayoutComponentBase
+@inject TokenAuthenticationStateProvider _tokenProvider
+
+<PageTitle>SimpleAdmin.BlazorUI</PageTitle>
+<BlazoredToasts />
+<div class="page">
+    <AuthorizeView>
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+        </AuthorizeView>
+    <main>
+      @*  <AuthorizeView>
+        <div class="top-row px-4">
+            Logged in as @context.User.FindFirst("UserName").Value
+                <button class="btn btn-sm btn-outline-dark" @onclick="@(() => _tokenProvider.SetTokenAsync(null))">Logout</button>
+            <a href="https://docs.microsoft.com/aspnet/" target="_blank"></a>
+        </div>
+        </AuthorizeView>*@
+            @Body     
+    </main>
+</div>
+
+
+

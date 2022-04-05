@@ -1,0 +1,171 @@
+﻿<div class="card" style="margin-bottom:5px;">
+    <div class="card-body">
+        <EditForm @ref="itemForm" Model="itemModel" OnValidSubmit="Save" @onreset="@Reset">
+            <div class="row">
+                <DataAnnotationsValidator />
+                <input type="hidden" @bind-value="itemModel.id" />
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Name</label>
+                        <InputText class="form-control" @bind-Value="itemModel.title" />
+                        <ValidationMessage For="@(()=> itemModel.title)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <InputSelect class="form-control" @bind-Value="itemModel.Category.id">
+                            <option value="">Category...</option>
+                            @if (categories != null)
+                            {
+                                @foreach (var category in categories)
+                                {
+                                    <option value="@category.id">@category.Name</option>
+                                }
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(()=> itemModel.CategoryId)" />
+                    </div>
+                </div>
+                <div class=col-12>
+                    <div class="form-group">
+                        <label>Summary</label>
+                        <InputText class="form-control" @bind-Value="itemModel.summary" />
+                        <ValidationMessage For="@(()=> itemModel.summary)" />
+                    </div>
+                </div>
+                <div class=col-12>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <InputText class="form-control" @bind-Value="itemModel.description" />
+                        <ValidationMessage For="@(()=> itemModel.description)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>isEnabled</label>
+                        <InputSelect class="form-control" @bind-Value="itemModel.isEnabled">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(()=> itemModel.isEnabled)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <ImageUploader InputId="Upload" InputText="Upload Image" InputTextUploading="Uploading..."
+                                       @bind-ImageSrc="itemModel.Photo" ImageHeight="100" ImageWidth="100" OnUpload="@OnUpload"
+                                       OnUploadFinish="@OnUploadFinish" UploadPath="items"/>
+                    </div>
+                </div>
+                <h3>Seo Tools</h3>
+                <hr />
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Url</label>
+                        <InputText class="form-control" @bind-Value="itemModel.Url" />
+                        <ValidationMessage For="@(()=> itemModel.Url)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Seo Title</label>
+                        <InputText class="form-control" @bind-Value="itemModel.seotitle" />
+                        <ValidationMessage For="@(()=> itemModel.seotitle)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Seo Description</label>
+                        <InputText class="form-control" @bind-Value="itemModel.Seodescription" />
+                        <ValidationMessage For="@(()=> itemModel.Seodescription)" />
+                    </div>
+                </div>
+                 <div class=col-6>
+                    <div class="form-group">
+                        <label>Seo keywords</label>
+                        <InputText class="form-control" @bind-Value="itemModel.seokeywords" />
+                        <ValidationMessage For="@(()=> itemModel.seokeywords)" />
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:5px">
+                    <button type="submit" class="btn btn-primary" disabled="@SaveBtnDisabled"><i class="oi oi-check"></i>Submit</button>
+                    <button type="reset" class="btn btn-light">Cancel</button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public ItemModel itemModel { set; get; }
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+
+    EditForm itemForm { get; set; }
+    private bool SaveBtnDisabled { get; set; } = false;
+    private List<CategoryModel> categories { get; set; } = null;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            string token = await _tokenProvider.GetTokenAsync();
+            HttpClient httpclient = _http.CreateClient("SimpleAdmin");
+            httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            categories= await httpclient.GetFromJsonAsync<List<CategoryModel>>($"category/get/0/100?filters=&filtertxt=");
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<IndexForm>();
+            logger.Log(LogLevel.Error, ex, "Get User");
+        }
+    }
+    private async Task OnUpload()
+    {
+        SaveBtnDisabled = true;
+
+    }
+    private async Task OnUploadFinish()
+    {
+        SaveBtnDisabled = false;
+    }
+    private async Task Save()
+    {
+        try
+        {
+            var httpclient = _http.CreateClient("SimpleAdmin");
+            httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await _tokenProvider.GetTokenAsync());
+            var httpresult = await httpclient.PostAsJsonAsync<ItemModel>("item/save", itemModel);
+            if (httpresult.IsSuccessStatusCode)
+            {
+                _toastService.ShowSuccess(@_messages.Value.SaveSuccess);
+                await OnSave.InvokeAsync();
+            }
+            else
+            {
+                _toastService.ShowError(@_messages.Value.CriticalError);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<IndexForm>();
+            logger.Log(LogLevel.Error, ex, "Item Form");
+        }
+    }
+    private async Task Reset()
+    {
+        _toastService.ShowInfo(@_messages.Value.TransactionCanceled);
+        await OnCancel.InvokeAsync();
+    }
+}

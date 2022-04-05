@@ -1,0 +1,128 @@
+﻿ @if (users == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="input-group mb-3">       
+            <input id="txtSearch" @bind-value="@filtertxt" type="text"  class="form-control" placeholder="Search..." >
+            <div class="input-group-prepend">
+                <div class="input-group-text">
+                    <a href="" @onclick:preventDefault  @onclick="()=>Filter()"><i class="oi oi-magnifying-glass"></i></a>
+                </div>
+            </div>
+            <div class="input-group-prepend">
+                <div class="input-group-text" style="padding:0px">
+                    <Multidropdown @bind-DataList="filterOption"></Multidropdown>
+                </div>
+            </div>
+        </div>
+
+        <table class="table table-hover table-striped flex-column-reverse">
+            <thead>
+                <tr class="bg-main text-white">
+                    <th>Photo</th>
+                    <th>FullName</th>
+                    <th>Email</th>
+                    <th>Enabled</th>
+                    <th>Option</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in users)
+                {
+                    <tr id="@user.id">
+                        <td><img width="100" height="100" src="@($"{apiLink}{user.photo}") " /></td>
+                        <td>@user.fullName</td>
+                        <td>@user.email</td>
+                        <td>@user.isEnabled</td>
+                        <td class="optiontd">
+                            <a class="edit" @onclick="()=>Edit(user.id)" href="" @onclick:preventDefault>
+                                <i title="edite" class="oi oi-pencil"></i>
+                                </a>
+                          </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="noborder">
+                    <td colspan="5">
+                       <Pager @ref="pager" Url="user/getcount" QueryString="@ApiQueryString" PageSize="@pageSize" OnNavigate="(arg)=>OnNavigate(arg)"/>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+
+@code {
+    [Parameter]
+    public EventCallback<int> OnEdit { get; set; }
+    public string ApiQueryString
+    {
+        get
+        {
+            return $"filters={String.Join(";", filterOption.Where(c => c.Selected).Select(c => c.Value))}&filtertxt={filtertxt}";
+        }
+    }
+
+    private string apiLink
+    {
+        get
+        {
+            return _configuration.GetValue<string>("SimpleAdminBasePublic");
+        }
+    }
+    private List<MultiDDLModel> filterOption = new List<MultiDDLModel>
+    { 
+        new MultiDDLModel("Full Name", "fullname",true), 
+        new MultiDDLModel("Email", "email",true) 
+    };
+    private List<UserModel> users;
+    private int pageSize = 10;
+    SimpleAdmin.BlazorUI.Component.Pager pager;
+    string filtertxt { set; get; }
+    
+
+    protected override async Task OnInitializedAsync()
+    {
+        await OnNavigate(1);
+    }
+    private async Task Filter()
+    {
+        await OnNavigate(1);
+    }
+    private async Task OnNavigate(int pageIndex)
+    {
+        users = await GetData(pageIndex);
+    }
+    private async Task<List<UserModel>> GetData(int pageIndex)
+    {
+        try
+        {
+            string token = await _tokenProvider.GetTokenAsync();
+            HttpClient httpclient = _http.CreateClient("SimpleAdmin");
+            httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            
+            return await httpclient.GetFromJsonAsync<List<UserModel>>($"user/get/{(pageIndex-1)*pageSize}/{pageSize}?{ApiQueryString}");
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<UserTable>();
+            logger.Log(LogLevel.Error, ex, "Get User");
+            return null;
+        }
+    }
+
+    
+    public async Task Refresh()
+    {
+        await Filter();
+        StateHasChanged();
+        await pager.UpdateCount();
+    }
+    protected async Task Edit(int id)
+    {
+        await OnEdit.InvokeAsync(id);
+    }
+}

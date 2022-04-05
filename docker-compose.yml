@@ -1,0 +1,40 @@
+services:  
+  db:
+   build:
+      context: ./
+      dockerfile: ./SimpleAdmin.DataAccess/Dockerfile 
+   image: simpleadmindb
+   container_name: simpleadmincdb
+   ports:
+      - 12433:1433
+   networks:
+      - SimpleAdminNetwork
+
+  api:
+   build:
+      context: ./
+      dockerfile: ./SimpleAdmin.API/Dockerfile
+   image: simpleadminapi
+   container_name: simpleadmincapi
+   ports:
+      - 8081:80
+   depends_on:
+      - db
+   networks:
+      - SimpleAdminNetwork
+
+  ui:
+    build:
+      context: ./
+      dockerfile: ./SimpleAdmin.BlazorUI/Dockerfile
+    image: simpleadminui
+    container_name: simpleadmincui
+    ports:
+      - 8082:80
+    depends_on:
+      - api
+    networks:
+      - SimpleAdminNetwork
+
+networks:
+  SimpleAdminNetwork:

@@ -1,0 +1,101 @@
+﻿<label class="pagerlbl">Showing @((CurrentPage-1)*PageSize) - @((CurrentPage*PageSize)<Count?(CurrentPage*PageSize):Count) of @Count</label>
+<nav aria-label="Page navigation" class="tblpager">
+    <ul class="pagination">
+        <li class="page-item @(CurrentPage==1?"disabled":"" )">
+            <a class="page-link" @onclick="()=>Navigate(1)" href="" @onclick:preventDefault>Previous</a>
+        </li>
+
+        @for(int i = 1;i<=5;i++)
+        {
+            var j = i;
+            <li class="page-item @(CurrentPage==j?"active":"" ) @((j>MaxPage&&CurrentPage!=j)?"disabled":"" )">
+                <a class="page-link" @onclick="()=>Navigate(j)" href="" @onclick:preventDefault>@j</a>
+            </li>    
+        }
+        
+        <li class="page-item @(CurrentPage!=MaxPage?"":"disabled")">
+            <a @onclick="()=>Navigate(CurrentPage+1)" class="page-link" href="" @onclick:preventDefault>Next</a>
+        </li>
+    </ul>
+</nav>
+
+@code {
+    [Parameter]
+    public string Url { set; get; }
+    [Parameter]
+    public string QueryString
+    {
+        get => queryString;
+        set
+        {
+            if (queryString != value)
+            {
+                queryString = value;
+
+                InvokeAsync(async () => await UpdateCount());
+            }
+        }
+    }
+
+    [Parameter]
+    public int PageSize { set; get; }
+    [Parameter]
+    public EventCallback<int> OnNavigate { get; set; }
+
+    private int Count = 0;
+    private int CurrentPage = 1;
+    private int MaxPage = 1;
+    private string queryString; 
+
+
+    public async Task UpdateCount()
+    {
+        Count = await GeCount();
+        if (Count > 0)
+        {
+            MaxPage = Count / PageSize;
+            if(Count % PageSize>0)
+            {
+                MaxPage += 1;  
+            }
+            StateHasChanged();
+        }
+    }
+
+
+    protected async Task Navigate(int index)
+    {
+        if (index <= MaxPage && index !=CurrentPage)
+        {
+            CurrentPage = index;
+            await OnNavigate.InvokeAsync(index);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateCount();
+    }
+
+    private async Task<int> GeCount()
+    {
+        try
+        {
+            string token= await _tokenProvider.GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
+            {
+                HttpClient httpclient = _http.CreateClient("SimpleAdmin");
+                httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                return await httpclient.GetFromJsonAsync<int>($"{Url}?{QueryString}");
+            }
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            var logger = _loggerFactory.CreateLogger<Pager>();
+            logger.Log(LogLevel.Error, ex, "Get User Count");
+            return 0;
+        }
+    }
+
+}

@@ -1,0 +1,22 @@
+﻿<div class="top-row px-4">
+    <div class="top-row-inner">
+        <div class="top-row-title">
+            <a>@Title</a>
+        </div>
+        <button type="button" class="btn text-white bg-main" id="btnAddNew" @onclick="@BtnClick">@BtnText</button>
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; }
+    [Parameter]
+    public string BtnText { get; set; }
+    [Parameter]
+    public EventCallback OnBtnClick { get; set; }
+    protected async Task BtnClick()
+    {
+        await OnBtnClick.InvokeAsync();
+    }
+}

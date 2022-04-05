@@ -1,0 +1,25 @@
+﻿@using System.Net.Http
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using Microsoft.JSInterop
+@using SimpleAdmin.BlazorUI
+@using SimpleAdmin.BlazorUI.Shared
+@using Blazored.Toast
+@using Blazored.Toast.Services
+@using Microsoft.Extensions.Options
+@using SimpleAdmin.Model 
+@using System.Net.Http.Headers;
+@using SimpleAdmin.BlazorUI.Models;
+@using SimpleAdmin.BlazorUI.Pages;
+@using SimpleAdmin.BlazorUI.Component;
+
+@inject IHttpClientFactory _http
+@inject TokenAuthenticationStateProvider _tokenProvider
+@inject IToastService _toastService
+@inject ILoggerFactory _loggerFactory
+@inject IOptions<Messages> _messages
+@inject IConfiguration _configuration;

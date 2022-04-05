@@ -1,0 +1,68 @@
+﻿@page "/users"
+@attribute [Authorize]
+
+<PageTitle>User Management</PageTitle>
+
+<TopRow Title="Users" BtnText="Add User" OnBtnClick="@OnAddClick" />
+<article class="content px-4">
+    @if (ShowEditForm)
+    {
+        <SimpleAdmin.BlazorUI.Pages.UserComponent.UserForm userModel="userModel" OnSave="@OnFormSave" OnCancel="@OnFormCancel"/>
+    }
+    <SimpleAdmin.BlazorUI.Pages.UserComponent.UserTable OnEdit="(arg)=>OnEdit(arg)" @ref="userTable"/>
+
+</article>
+
+@code {
+
+    private UserModel userModel = new UserModel();
+
+    private bool ShowEditForm = false;
+
+    SimpleAdmin.BlazorUI.Pages.UserComponent.UserTable userTable;
+
+    private async Task OnAddClick()
+    {
+        userModel = new UserModel();
+        userModel.photo = "/uploads/users/2022/04/04/649106081.png";
+        userModel.isEnabled = true;
+        ShowEditForm = true;
+    }
+    private async Task OnEdit(int id)
+    {
+       try
+        {
+            string token = await _tokenProvider.GetTokenAsync();
+            HttpClient httpclient = _http.CreateClient("SimpleAdmin");
+            httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            
+            userModel= await httpclient.GetFromJsonAsync<UserModel>($"user/getbyid/{id}");
+             ShowEditForm = true;
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<Users>();
+            logger.Log(LogLevel.Error, ex, "Get User");
+        }
+    }
+
+    private async Task OnFormSave()
+    {
+        FormInit();
+        await userTable.Refresh();
+        
+    }
+    private async Task OnFormCancel()
+    {
+        FormInit();
+    }
+    private void FormInit()
+    {
+        userModel = null;
+        ShowEditForm = false;
+    }
+}
+
+
+

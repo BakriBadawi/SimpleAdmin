@@ -1,0 +1,99 @@
+﻿@page "/login"
+@attribute [AllowAnonymous]
+@inject NavigationManager _navigationManager
+
+<PageTitle>Simple Admin Login</PageTitle>
+<article class="content px-4">
+    <div class="login">
+        <center>
+                <h2>Simple Admin Login</h2>
+     </center>
+    
+    <div class="container col-6">
+        @if (loginFailure)
+        {
+            <div class="alert alert-danger">@_messages.Value.LoginFailed</div>
+        }
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Login</h5>
+                  <EditForm @ref="loginform" Model="loginModel" OnValidSubmit="SubmitCredentials">
+                    <DataAnnotationsValidator />
+                    <div class="form-group">
+                        <label>Email address</label>
+                        <InputText class="form-control" @bind-Value="loginModel.email" />
+                        <ValidationMessage For="@(()=> loginModel.email)" />
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <InputText type="password" class="form-control" @bind-Value="loginModel.password" />
+                        <ValidationMessage For="@(()=> loginModel.password)" />
+                    </div>
+                    <div class="form-group" style="margin-top:5px">
+                        <button type="submit" class="btn btn-primary" style="width:100%">Submit</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    </div>
+    
+</article>
+@code {
+    LoginModel loginModel = new LoginModel();
+    bool loginFailure;
+    EditForm loginform { get; set; }
+
+    [CascadingParameter(Name = "RouteData")]
+    public RouteData? RouteData { get; set; }
+    [Parameter]
+    public bool EnableRedirection { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (EnableRedirection && RouteData!=null && RouteData.PageType.Name.ToLower() != "login")
+        {
+            _navigationManager.NavigateTo("/login");
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var authenticationState = await _tokenProvider.GetAuthenticationStateAsync();
+        if (authenticationState != null && authenticationState.User.Identity.IsAuthenticated)
+        {
+            _navigationManager.NavigateTo("/");
+        }
+       await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task SubmitCredentials()
+    {
+        try
+        {
+           
+            var httpclient = _http.CreateClient("SimpleAdmin");
+            var httpresult = await httpclient.PostAsJsonAsync<LoginModel>("login/getToken", loginModel);
+            if (httpresult.IsSuccessStatusCode)
+            {
+                var result = await httpresult.Content.ReadFromJsonAsync<LoginResultModel>();
+                loginFailure = result.Token == null;
+                if (!loginFailure)
+                {
+                    await _tokenProvider.SetTokenAsync(result.Token, result.Expiry);
+                    _navigationManager.NavigateTo("/");
+                }
+            }
+            else
+            {
+                loginFailure = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            loginFailure = true;
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<Login>();
+            logger.Log(LogLevel.Error, ex, "login api");   
+        }
+    }
+}

@@ -1,0 +1,91 @@
+﻿<label for="@InputId" class="btn bg-main text-white" style="padding:0px">
+    <label for="@InputId" class="UploadProgress">
+        <i class="oi oi-cloud-upload"></i> @(IsUploading?InputTextUploading:InputText)
+    </label>
+</label>
+<InputFile style="display:none" id="@InputId" OnChange="@UploadImage"></InputFile>
+<img id="userImage" class="UploadPic" width="@ImageWidth" height="@ImageHeight" src="@($"{apiLink}{ImageSrc}")">
+
+@code {
+    [Parameter]
+    public string InputId{ set; get; }
+    [Parameter]
+    public string InputText{ set; get; }
+    [Parameter]
+    public string InputTextUploading{ set; get; }
+    [Parameter]
+    public string ImageSrc{ get => imageSrc;
+        set
+        {
+            if (imageSrc != value)
+            {
+                imageSrc = value;
+                ImageSrcChanged.InvokeAsync(value);
+            }
+        } }
+    [Parameter]
+    public EventCallback<string> ImageSrcChanged { get; set; }
+    [Parameter]
+    public int ImageWidth{ set; get; }
+    [Parameter]
+    public int  ImageHeight{ set; get; }
+    [Parameter]
+    public string UploadPath{ set; get; }
+    [Parameter]
+    public EventCallback OnUpload { get; set; }
+    [Parameter]
+    public EventCallback OnUploadFinish { get; set; }
+
+    private bool IsUploading { set; get; } = false;
+    private string imageSrc{ set; get; }
+
+    private string apiLink
+    {
+        get
+        {
+            return _configuration.GetValue<string>("SimpleAdminBasePublic");
+        }
+    }
+    private async Task UploadMode()
+    {
+        IsUploading = true;
+        await OnUpload.InvokeAsync();
+    }
+    private async Task NormalMode()
+    {
+        IsUploading = false;
+        await OnUploadFinish.InvokeAsync();
+    }
+    private async Task UploadImage(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            await UploadMode();
+            using (var multipartFormContent = new MultipartFormDataContent())
+            {
+                //Load the file and set the file's Content-Type header
+
+                var fileStreamContent = new StreamContent(e.File.OpenReadStream(2000000));
+
+                multipartFormContent.Add(fileStreamContent, name: "file", fileName: e.File.Name);
+
+                var httpclient = _http.CreateClient("SimpleAdmin");
+                httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await _tokenProvider.GetTokenAsync());
+
+                var httpresult = await httpclient.PostAsync($"Uploader?path={UploadPath}", multipartFormContent);
+                if (httpresult.IsSuccessStatusCode)
+                {
+                    ImageSrc= await  httpresult.Content.ReadAsStringAsync();
+                }
+            }
+            await NormalMode();
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<ImageUploader>();
+            logger.Log(LogLevel.Error, ex, "Upload Image");
+        }
+    }
+}
+

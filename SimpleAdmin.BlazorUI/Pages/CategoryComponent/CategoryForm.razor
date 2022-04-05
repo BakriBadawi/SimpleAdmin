@@ -1,0 +1,131 @@
+﻿<div class="card" style="margin-bottom:5px;">
+    <div class="card-body">
+        <EditForm @ref="categoryform" Model="categoryModel" OnValidSubmit="Save" @onreset="@Reset">
+            <div class="row">
+                <DataAnnotationsValidator />
+                <input type="hidden" @bind-value="categoryModel.id" />
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Name</label>
+                        <InputText class="form-control" @bind-Value="categoryModel.Name" />
+                        <ValidationMessage For="@(()=> categoryModel.Name)" />
+                    </div>
+                </div>
+                <div class=col-12>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <InputText class="form-control" @bind-Value="categoryModel.description" />
+                        <ValidationMessage For="@(()=> categoryModel.description)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>isEnabled</label>
+                        <InputSelect class="form-control" @bind-Value="categoryModel.isEnabled">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(()=> categoryModel.isEnabled)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <ImageUploader InputId="Upload" InputText="Upload Image" InputTextUploading="Uploading..."
+                                       @bind-ImageSrc="categoryModel.Photo" UploadPath="categories" ImageHeight="100" ImageWidth="100" OnUpload="@OnUpload"
+                                       OnUploadFinish="@OnUploadFinish"/>
+                    </div>
+                </div>
+                <h3>Seo Tools</h3>
+                <hr />
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Url</label>
+                        <InputText class="form-control" @bind-Value="categoryModel.Url" />
+                        <ValidationMessage For="@(()=> categoryModel.Url)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Seo Title</label>
+                        <InputText class="form-control" @bind-Value="categoryModel.seotitle" />
+                        <ValidationMessage For="@(()=> categoryModel.seotitle)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Seo Description</label>
+                        <InputText class="form-control" @bind-Value="categoryModel.Seodescription" />
+                        <ValidationMessage For="@(()=> categoryModel.Seodescription)" />
+                    </div>
+                </div>
+                 <div class=col-6>
+                    <div class="form-group">
+                        <label>Seo keywords</label>
+                        <InputText class="form-control" @bind-Value="categoryModel.seokeywords" />
+                        <ValidationMessage For="@(()=> categoryModel.seokeywords)" />
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:5px">
+                    <button type="submit" class="btn btn-primary" disabled="@SaveBtnDisabled"><i class="oi oi-check"></i>Submit</button>
+                    <button type="reset" class="btn btn-light">Cancel</button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public CategoryModel categoryModel { set; get; }
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    
+    EditForm categoryform { get; set; }
+    private bool SaveBtnDisabled { get; set; } = false;
+
+    
+    private async Task OnUpload()
+    {
+        SaveBtnDisabled = true;
+    }
+    private async Task OnUploadFinish()
+    {
+        SaveBtnDisabled = false;
+    }
+    private async Task Save()
+    {
+        try
+        {
+            var httpclient = _http.CreateClient("SimpleAdmin");
+            httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await _tokenProvider.GetTokenAsync());
+
+            var httpresult = await httpclient.PostAsJsonAsync<CategoryModel>("category/save", categoryModel);
+            if (httpresult.IsSuccessStatusCode)
+            {
+                _toastService.ShowSuccess(@_messages.Value.SaveSuccess);
+                await OnSave.InvokeAsync();
+            }
+            else
+            {
+                _toastService.ShowError(@_messages.Value.CriticalError);
+            }
+        }
+        catch (Exception ex)
+        {
+
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<CategoryForm>();
+            logger.Log(LogLevel.Error, ex, "Category Form");
+        }
+    }
+    private async Task Reset()
+    {
+        _toastService.ShowInfo(@_messages.Value.TransactionCanceled);
+        await OnCancel.InvokeAsync();
+    }
+}

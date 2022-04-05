@@ -1,0 +1,107 @@
+﻿<div class="card" style="margin-bottom:5px;">
+    <div class="card-body">
+        <EditForm @ref="userform" Model="userModel" OnValidSubmit="Save" @onreset="@Reset">
+            <div class="row">
+                <DataAnnotationsValidator />
+                <input type="hidden" @bind-value="userModel.id" />
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <InputText class="form-control" @bind-Value="userModel.fullName" />
+                        <ValidationMessage For="@(()=> userModel.fullName)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Email address</label>
+                        <InputText class="form-control" @bind-Value="userModel.email" />
+                        <ValidationMessage For="@(()=> userModel.email)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" class="form-control" @bind-value="userModel.password" />
+                        <ValidationMessage For="@(()=> userModel.password)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <label>isEnabled</label>
+                        <InputSelect class="form-control" @bind-Value="userModel.isEnabled">
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(()=> userModel.isEnabled)" />
+                    </div>
+                </div>
+                <div class=col-6>
+                    <div class="form-group">
+                        <ImageUploader InputId="Upload" InputText="Upload Image" InputTextUploading="Uploading..."
+                                       @bind-ImageSrc="userModel.photo" ImageHeight="100" ImageWidth="100" OnUpload="@OnUpload"
+                                       OnUploadFinish="@OnUploadFinish" UploadPath="users"/>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:5px">
+                    <button type="submit" class="btn btn-primary" disabled="@SaveBtnDisabled"><i class="oi oi-check"></i>Submit</button>
+                    <button type="reset" class="btn btn-light">Cancel</button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public UserModel userModel { set; get; }
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    EditForm userform { get; set; }
+    private bool SaveBtnDisabled { get; set; } = false;
+
+
+    private async Task OnUpload()
+    {
+        SaveBtnDisabled = true;
+
+    }
+    private async Task OnUploadFinish()
+    {
+        SaveBtnDisabled = false;
+    }
+    private async Task Save()
+    {
+        try
+        {
+            var httpclient = _http.CreateClient("SimpleAdmin");
+            httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await _tokenProvider.GetTokenAsync());
+
+            var httpresult = await httpclient.PostAsJsonAsync<UserModel>("user/save", userModel);
+            if (httpresult.IsSuccessStatusCode)
+            {
+                _toastService.ShowSuccess(@_messages.Value.SaveSuccess);
+                await OnSave.InvokeAsync();
+            }
+            else
+            {
+                _toastService.ShowError(@_messages.Value.CriticalError);
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<UserForm>();
+            logger.Log(LogLevel.Error, ex, "login api");
+        }
+    }
+    private async Task Reset()
+    {
+        _toastService.ShowInfo(@_messages.Value.TransactionCanceled);
+        await OnCancel.InvokeAsync();
+    }
+}

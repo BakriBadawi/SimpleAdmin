@@ -1,0 +1,138 @@
+﻿ @if (items == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <div class="input-group mb-3">
+            <input id="txtSearch" @bind-value="@filtertxt" type="text"  class="form-control" placeholder="Search..." >
+            <div class="input-group-prepend">
+                <div class="input-group-text">
+                    <a href="" @onclick:preventDefault  @onclick="()=>Filter()"><i class="oi oi-magnifying-glass"></i></a>
+                </div>
+            </div>
+            <div class="input-group-prepend">
+                <div class="input-group-text" style="padding:0px">
+                    <Multidropdown @bind-DataList="filterOption"></Multidropdown>
+                </div>
+            </div>
+        </div>
+       
+        <table class="table table-hover table-striped flex-column-reverse">
+            <thead>
+                <tr class="bg-main text-white">
+                    <th>Photo</th>
+                    <th>title</th>
+                    <th>Category</th>
+                    <th>Seo title</th>
+                    <th>Option</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in items)
+                {
+                    <tr id="@item.id">
+                        <td><img width="100" height="100" src="@($"{apiLink}{item.Photo}")" /></td>
+                        <td>@item.title</td>
+                        <td>@(item.Category!=null?item.Category.Name:"")</td>
+                        <td>@item.seotitle</td>
+                        <td class="optiontd">
+                            <a class="edit" @onclick="()=>Edit(item.id)" href="" @onclick:preventDefault>
+                                <i title="edite" class="oi oi-pencil"></i>
+                                </a>
+                            <a class="edit" @onclick="()=>Delete(item)" href="" @onclick:preventDefault>
+                                <i title="edite" class="oi oi-trash"></i>
+                            </a>
+                          </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="noborder">
+                    <td colspan="5">
+                       <Pager @ref="pager" Url="user/getcount" QueryString="@ApiQueryString" PageSize="@pageSize" OnNavigate="(arg)=>OnNavigate(arg)"/>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+
+@code {
+    [Parameter]
+    public EventCallback<Guid> OnEdit { get; set; }
+    [Parameter]
+    public EventCallback<ItemModel> OnDelete { get; set; }
+    public string ApiQueryString
+    {
+        get
+        {
+            return $"filters={String.Join(";", filterOption.Where(c => c.Selected).Select(c => c.Value))}&filtertxt={filtertxt}";
+        }
+    }
+
+    private string apiLink
+    {
+        get
+        {
+            return _configuration.GetValue<string>("SimpleAdminBasePublic");
+        }
+    }
+    private List<MultiDDLModel> filterOption = new List<MultiDDLModel>
+    {
+       new MultiDDLModel("Title", "title",true),
+       new MultiDDLModel("Category", "categoryname",true),
+       new MultiDDLModel("URL", "url",true), new MultiDDLModel("Seo Title", "seotitle",false)
+    };
+    private List<ItemModel> items;
+    private int pageSize = 10;
+    private Pager pager;
+    private string filtertxt { set; get; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await OnNavigate(1);
+    }
+    private async Task Filter()
+    {
+        await OnNavigate(1);
+    }
+    private async Task OnNavigate(int pageIndex)
+    {
+        items = await GetData(pageIndex);
+    }
+    private async Task<List<ItemModel>> GetData(int pageIndex)
+    {
+        try
+        {
+            string token = await _tokenProvider.GetTokenAsync();
+            HttpClient httpclient = _http.CreateClient("SimpleAdmin");
+            httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            
+            return await httpclient.GetFromJsonAsync<List<ItemModel>>($"item/get/{(pageIndex-1)*pageSize}/{pageSize}?{ApiQueryString}");
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<IndexTable>();
+            logger.Log(LogLevel.Error, ex, "Get Items");
+            return null;
+        }
+    }
+    
+
+    public async Task Refresh()
+    {
+        await Filter();
+        StateHasChanged();
+        await pager.UpdateCount();
+    }
+    protected async Task Edit(Guid id)
+    {
+        await OnEdit.InvokeAsync(id);
+    }
+    protected async Task Delete(ItemModel item)
+    {
+        await OnDelete.InvokeAsync(item);
+    }
+}

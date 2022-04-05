@@ -1,0 +1,66 @@
+﻿@page "/categories"
+
+@attribute [Authorize]
+
+<PageTitle>Categories</PageTitle>
+
+<TopRow Title="Categories" BtnText="Add Category" OnBtnClick="@OnAddClick" />
+<article class="content px-4">
+    @if (ShowEditForm)
+    {
+        <SimpleAdmin.BlazorUI.Pages.CategoryComponent.CategoryForm CategoryModel="@categoryModel" OnSave="@OnFormSave" OnCancel="@OnFormCancel"/>
+    }
+    <SimpleAdmin.BlazorUI.Pages.CategoryComponent.CategoryTable OnEdit="(arg)=>OnEdit(arg)" @ref="categoryTable"/>
+
+</article>
+
+@code {
+    private CategoryModel categoryModel = new CategoryModel();
+    private bool ShowEditForm = false;
+    SimpleAdmin.BlazorUI.Pages.CategoryComponent.CategoryTable categoryTable;
+
+    private async Task OnAddClick()
+    {
+        categoryModel = new CategoryModel();
+        categoryModel.Photo = "/uploads/users/2022/04/04/649106081.png";
+        categoryModel.isEnabled = true;
+        ShowEditForm = true;
+    }
+    private async Task OnEdit(int id)
+    {
+       try
+        {
+            string token = await _tokenProvider.GetTokenAsync();
+            HttpClient httpclient = _http.CreateClient("SimpleAdmin");
+            httpclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            
+            categoryModel= await httpclient.GetFromJsonAsync<CategoryModel>($"category/getbyid/{id}");
+             ShowEditForm = true;
+        }
+        catch (Exception ex)
+        {
+            _toastService.ShowError(@_messages.Value.CriticalError);
+            var logger = _loggerFactory.CreateLogger<Categories>();
+            logger.Log(LogLevel.Error, ex, "Get Category");
+        }
+    }
+    private async Task OnFormSave()
+    {
+        FormInit();
+        await categoryTable.Refresh();
+        
+    }
+    private async Task OnFormCancel()
+    {
+        FormInit();
+    }
+    private void FormInit()
+    {
+        categoryModel = null;
+        ShowEditForm = false;
+    }
+}
+
+
+
+

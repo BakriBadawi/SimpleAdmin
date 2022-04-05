@@ -1,0 +1,10 @@
+﻿.UploadProgress {
+    padding: 10px;
+    background-color: #3a0647;
+    width: unset;
+    float: left;
+    margin-bottom: 0;
+}
+img {
+    padding:5px;
+}
