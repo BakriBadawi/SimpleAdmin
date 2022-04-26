@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 6.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
+    - name: Publish api
+      run: dotnet publish SimpleAdmin.API/SimpleAdmin.API.csproj -c Release -o websiteapi
+    - name: Publish ui
+      run: dotnet publish SimpleAdmin.BlazorUI/SimpleAdmin.BlazorUI.csproj -c Release -o websiteui
+    - name: Upload a Build Artifact api
+      uses: actions/upload-artifact@v2.2.2
+      with:
+        name: website
+        path: websiteapi/**
+        if-no-files-found: error
+    - name: Upload a Build Artifact UI
+      uses: actions/upload-artifact@v2.2.2
+      with:
+        name: website
+        path: websiteui/**
+        if-no-files-found: error
