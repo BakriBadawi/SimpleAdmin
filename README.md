@@ -1,4 +1,4 @@
-# SimpleAdmin
+# SimpleAdmin ![](https://github.com/BakriBadawi/SimpleAdmin/actions/workflows/Build.yml/badge.svg)
 Admin panel which is built using .net 6, entity core, web api, and blazor UI
 to run this applicaiton using docker 
 ## docker compose 
